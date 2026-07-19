@@ -1,0 +1,33 @@
+export const assertionTypes = [
+  { label: 'Visible', value: 'Visible', needsLocator: true, needsValue: false },
+  { label: 'Hidden', value: 'Hidden', needsLocator: true, needsValue: false },
+  { label: 'Enabled', value: 'Enabled', needsLocator: true, needsValue: false },
+  { label: 'Disabled', value: 'Disabled', needsLocator: true, needsValue: false },
+  { label: 'Checked', value: 'Checked', needsLocator: true, needsValue: false },
+  { label: 'Unchecked', value: 'Unchecked', needsLocator: true, needsValue: false },
+  { label: 'Editable', value: 'Editable', needsLocator: true, needsValue: false },
+  { label: 'Empty', value: 'Empty', needsLocator: true, needsValue: false },
+  { label: 'URL Equals', value: 'URL Equals', needsLocator: false, needsValue: true },
+  { label: 'URL Contains', value: 'URL Contains', needsLocator: false, needsValue: true },
+  { label: 'Text Equals', value: 'Text Equals', needsLocator: true, needsValue: true },
+  { label: 'Text Contains', value: 'Text Contains', needsLocator: true, needsValue: true },
+  { label: 'Page Title', value: 'Page Title', needsLocator: false, needsValue: true },
+  { label: 'Input Value', value: 'Input Value', needsLocator: true, needsValue: true },
+  { label: 'Attribute', value: 'Attribute', needsLocator: true, needsValue: true },
+  { label: 'CSS Class', value: 'CSS Class', needsLocator: true, needsValue: true },
+  { label: 'Count', value: 'Count', needsLocator: true, needsValue: true },
+];
+
+export const locatorTypeForAssertions = [
+  'CSS',
+  'XPath',
+  'ID',
+  'Name',
+  'Class',
+  'Role',
+  'Text',
+  'Placeholder',
+  'Label',
+  'Alt Text',
+  'Test ID',
+];
