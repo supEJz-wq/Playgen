@@ -9,7 +9,7 @@ export function generateCicdAzureDevops(model) {
 
   const vmImage = os === 'macos' ? 'macOS-latest' : os === 'windows' ? 'windows-latest' : 'ubuntu-latest'
 
-  const azureEnvLoad = buildAzureEnvLoad(p.projectVariables)
+  const azureEnvLoad = buildAzureEnvLoad(p.projectVariables, p.activeEnvironment)
   const cacheStep = buildAzureCache(p.cacheConfig)
   const baseInstall = fw === 'playwright'
     ? `      - task: Npm@1
@@ -72,7 +72,7 @@ pool:
   vmImage: '${vmImage}'
 
 variables:
-  CI: true
+  CI: true${p.activeEnvironment ? `\n  APP_ENV: '${p.activeEnvironment}'` : ''}
 
 steps:
 ${installStep}
@@ -113,13 +113,15 @@ function buildAzureCache(cacheConfig) {
           cacheHitVar: CACHE_RESTORED`
 }
 
-function buildAzureEnvLoad(vars) {
-  const active = (vars || []).filter((v) => v.key)
-  if (active.length === 0) return ''
-  return `      - script: cat .env.variables | tee -a $(Build.SourcesDirectory)/.env
-        displayName: 'Load Environment Variables'
-        condition: succeeded()
-`
+function buildAzureEnvLoad(vars, activeEnv) {
+  const hasVars = (vars || []).some((v) => v.key)
+  const hasEnv = !!activeEnv
+  if (!hasVars && !hasEnv) return ''
+  const lines = []
+  if (hasVars) lines.push('cat .env.variables | tee -a $(Build.SourcesDirectory)/.env')
+  if (hasEnv) lines.push(`cat .env.${activeEnv} | tee -a $(Build.SourcesDirectory)/.env`)
+  if (lines.length === 0) return ''
+  return `      - script: |\n${lines.map((l) => `          ${l}`).join('\n')}\n        displayName: 'Load Environment Variables'\n        condition: succeeded()\n`
 }
 
 function fwLabel(fw) {

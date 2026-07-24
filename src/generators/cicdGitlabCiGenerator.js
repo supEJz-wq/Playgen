@@ -55,10 +55,10 @@ stages:
 ${stages.map(s => `  - ${s}`).join('\n')}
 
 variables:
-  CI: "true"
+  CI: "true"${p.activeEnvironment ? `\n  APP_ENV: "${p.activeEnvironment}"` : ''}
 
 ${buildGitlabCache(p.cacheConfig)}
-${buildGitlabEnvLoad(p.projectVariables)}
+${buildGitlabEnvLoad(p.projectVariables, p.activeEnvironment)}
 ${fw === 'playwright' ? '' : ''}${fwLabel(fw)}-Tests:
   stage: test
   image: ${image}
@@ -105,12 +105,18 @@ ${p}
 `
 }
 
-function buildGitlabEnvLoad(vars) {
-  const active = (vars || []).filter((v) => v.key)
-  if (active.length === 0) return ''
-  return `  artifacts:
+function buildGitlabEnvLoad(vars, activeEnv) {
+  const hasVars = (vars || []).some((v) => v.key)
+  const hasEnv = !!activeEnv
+  if (!hasVars && !hasEnv) return ''
+  const cmds = []
+  if (hasVars) cmds.push('cat .env.variables >> .env')
+  if (hasEnv) cmds.push(`cat .env.${activeEnv} >> .env`)
+  return `  before_script:
+${cmds.map((c) => `    - ${c}`).join('\n')}
+  artifacts:
     reports:
-      dotenv: .env.variables
+      dotenv: .env
 `
 }
 

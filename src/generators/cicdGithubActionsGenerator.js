@@ -21,7 +21,7 @@ export function generateCicdGithubActions(model) {
     'Scheduled Run': 'schedule:\n    - cron: \'0 6 * * 1-5\'',
   }
 
-  const loadEnvStep = buildLoadEnvStep(p.projectVariables, 'github')
+  const loadEnvStep = buildLoadEnvStep(p.projectVariables, 'github', p.activeEnvironment)
   const cacheStep = buildCacheStep(p.cacheConfig)
   const baseInstall = fw === 'playwright'
     ? `      - name: Install Dependencies\n        run: npm ci\n\n      - name: Install Playwright Browsers\n        run: npx playwright install --with-deps`
@@ -59,7 +59,7 @@ on:
   ${triggers[trigger] || triggers['Push']}
 
 env:
-  CI: true
+  CI: true${p.activeEnvironment ? `\n  APP_ENV: ${p.activeEnvironment}` : ''}
 
 jobs:
   test:
@@ -121,11 +121,16 @@ function buildCacheStep(cacheConfig) {
 `
 }
 
-function buildLoadEnvStep(vars, platform) {
-  const active = (vars || []).filter((v) => v.key)
-  if (active.length === 0) return ''
+function buildLoadEnvStep(vars, platform, activeEnv) {
+  const hasVars = (vars || []).some((v) => v.key)
+  const hasEnv = !!activeEnv
+  if (!hasVars && !hasEnv) return ''
+  const lines = []
   if (platform === 'github') {
-    return `      - name: Load Environment Variables\n        run: cat .env.variables >> ${D}GITHUB_ENV\n\n`
+    if (hasVars) lines.push(`cat .env.variables >> ${D}GITHUB_ENV`)
+    if (hasEnv) lines.push(`cat .env.${activeEnv} >> ${D}GITHUB_ENV`)
+    if (lines.length === 0) return ''
+    return `      - name: Load Environment Variables\n        run: |\n${lines.map((l) => `          ${l}`).join('\n')}\n\n`
   }
   return ''
 }

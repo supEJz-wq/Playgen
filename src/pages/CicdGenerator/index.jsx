@@ -82,7 +82,7 @@ export default function CicdGenerator() {
       testSuites: showAdvanced ? testSuites : [],
       executionOptions: showAdvanced ? executionOptions : { mode: 'sequential', workers: 1, retries: 0, timeout: 60, slowMo: 0, failFast: false, headless: true },
       environments: showAdvanced ? environments : [],
-      activeEnvironment: showAdvanced ? activeEnvironment : 'dev',
+      activeEnvironment: showAdvanced ? activeEnvironment : '',
       cacheConfig: showAdvanced ? cacheConfig : { packageManager: '' },
       matrixConfig: showAdvanced ? matrixConfig : { browsers: [], os: [] },
       projectVariables: showAdvanced ? projectVariables : [],

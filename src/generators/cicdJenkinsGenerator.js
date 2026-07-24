@@ -27,7 +27,7 @@ export function generateCicdJenkins(model) {
   const retriesFlag = (p.executionOptions?.retries || 0) > 0 ? ` --retries=${p.executionOptions.retries}` : ''
   const slowMoFlag = (p.executionOptions?.slowMo || 0) > 0 ? ` --slow-mo=${p.executionOptions.slowMo}` : ''
   const suiteGrep = buildSuiteGrep(p.testSuites)
-  const loadJenkinsEnv = buildJenkinsEnvLoad(p.projectVariables)
+  const loadJenkinsEnv = buildJenkinsEnvLoad(p.projectVariables, p.activeEnvironment)
   const testStage = fw === 'playwright'
     ? `    stage('Run Tests') {
       steps {
@@ -69,9 +69,9 @@ pipeline {
         ${fw === 'playwright' || lang === 'JavaScript' ? "nodejs 'NodeJS'" : lang === 'Java' ? "maven 'Maven'" : lang === 'Python' ? '' : "dotnet 'DotNet'"}
     }
 
-    environment {
-        CI = 'true'
-    }
+  environment {
+    CI = 'true'${p.activeEnvironment ? `\n    APP_ENV = '${p.activeEnvironment}'` : ''}
+  }
 
 ${triggerConfig}
     stages {
@@ -94,10 +94,14 @@ function buildSuiteGrep(suites) {
   return ` --grep "${tags.join('|')}"`
 }
 
-function buildJenkinsEnvLoad(vars) {
-  const active = (vars || []).filter((v) => v.key)
-  if (active.length === 0) return ''
-  return `sh 'cat .env.variables > .env || true'\n        `
+function buildJenkinsEnvLoad(vars, activeEnv) {
+  const hasVars = (vars || []).some((v) => v.key)
+  const hasEnv = !!activeEnv
+  if (!hasVars && !hasEnv) return ''
+  const cmds = []
+  if (hasVars) cmds.push('cat .env.variables >> .env')
+  if (hasEnv) cmds.push(`cat .env.${activeEnv} >> .env`)
+  return cmds.map((c) => `sh '${c} || true'\n        `).join('')
 }
 
 function fwLabel(fw) {
