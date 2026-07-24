@@ -17,11 +17,11 @@ export default function Hero() {
         </h1>
 
         <p className="mt-6 text-xl font-medium text-slate-700 dark:text-slate-300 sm:text-2xl">
-          Convert Manual Test Cases into Playwright Scripts in Seconds.
+          Enterprise QA Automation Suite for Playwright, Selenium &amp; Appium
         </p>
 
         <p className="mt-4 text-base text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-          Create structured manual test cases and instantly generate clean Playwright JavaScript code.
+          Build tests visually and generate production-ready automation code across multiple frameworks and languages.
         </p>
 
         <div className="mt-10 flex items-center justify-center gap-4">

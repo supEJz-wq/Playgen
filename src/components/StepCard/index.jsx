@@ -1,23 +1,24 @@
 import { useState } from 'react'
 import LocatorBuilder from '../LocatorBuilder'
-import { allActions, actionsWithNoLocator } from '../../constants/actions'
+import { allActions, actionsWithNoLocator, actionsRequiringValue } from '../../constants/actions'
+import { allAppiumActions, appiumActionsWithNoLocator, appiumActionsRequiringValue } from '../../constants/appiumActions'
 
-export default function StepCard({ step, index, onChange, onDelete, onDuplicate, onMoveUp, onMoveDown, isFirst, isLast }) {
+export default function StepCard({ step, index, onChange, onDelete, onDuplicate, onMoveUp, onMoveDown, isFirst, isLast, colors, framework }) {
   const [expanded, setExpanded] = useState(false)
-  const showLocator = !actionsWithNoLocator.includes(step.action)
-  const showValue = ['Fill', 'Press', 'Select Option', 'Open URL', 'Wait For URL', 'Wait For Response',
-    'Drag And Drop', 'Screenshot', 'Full Page Screenshot', 'Press Arrow Keys',
-    'GET Request', 'POST Request', 'PUT Request', 'DELETE Request', 'Upload File',
-  ].includes(step.action)
+  const c = colors || { primary: 'pink-500', light: 'pink-100', dark: 'pink-900/30', text: 'pink-600', darkText: 'pink-400', ring: 'pink-200', darkRing: 'pink-800', focus: 'pink-500', hoverLight: 'pink-50', hoverDark: 'pink-900/20' }
+  const isAppium = framework === 'appium'
+  const actionList = isAppium ? allAppiumActions : allActions
+  const noLocatorList = isAppium ? appiumActionsWithNoLocator : actionsWithNoLocator
+  const needsValueList = isAppium ? appiumActionsRequiringValue : actionsRequiringValue
+  const showLocator = !noLocatorList.includes(step.action)
+  const showValue = needsValueList.includes(step.action)
 
   return (
     <div className="group rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 shadow-sm hover:shadow-md transition-all duration-200">
       <div className="p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-pink-100 dark:bg-pink-900/30 text-xs font-bold text-pink-600 dark:text-pink-400">
-              {index + 1}
-            </span>
+            <span className={'flex h-7 w-7 items-center justify-center rounded-lg bg-' + c.light + ' dark:bg-' + c.dark + ' text-xs font-bold text-' + c.text + ' dark:text-' + c.darkText}>{index + 1}</span>
             <div className="flex items-center gap-1">
               <button onClick={onMoveUp} disabled={isFirst} className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer" title="Move up">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5"><path fillRule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0110 17z" clipRule="evenodd" /></svg>
@@ -29,7 +30,7 @@ export default function StepCard({ step, index, onChange, onDelete, onDuplicate,
             <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Step {index + 1}</span>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={onDuplicate} className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-pink-500 hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-colors cursor-pointer" title="Duplicate step">
+            <button onClick={onDuplicate} className={'flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-' + c.text + ' hover:bg-' + c.hoverLight + ' dark:hover:bg-' + c.hoverDark + ' transition-colors cursor-pointer'} title="Duplicate step">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4"><path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" /><path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" /></svg>
             </button>
             <button onClick={onDelete} className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors cursor-pointer" title="Delete step">
@@ -45,7 +46,7 @@ export default function StepCard({ step, index, onChange, onDelete, onDuplicate,
               value={step.description || ''}
               onChange={(e) => onChange(index, 'description', e.target.value)}
               placeholder="Step description (e.g., Enter username)"
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-500 focus:border-pink-500 focus:outline-none focus:ring-2 focus:ring-pink-200 dark:focus:ring-pink-800 transition-colors"
+              className={'w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-500 focus:border-' + c.focus + ' focus:outline-none focus:ring-2 focus:ring-' + c.ring + ' dark:focus:ring-' + c.darkRing + ' transition-colors'}
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -54,9 +55,9 @@ export default function StepCard({ step, index, onChange, onDelete, onDuplicate,
               <select
                 value={step.action}
                 onChange={(e) => onChange(index, 'action', e.target.value)}
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-2 text-xs text-slate-700 dark:text-slate-300 focus:border-pink-500 focus:outline-none focus:ring-2 focus:ring-pink-200 dark:focus:ring-pink-800 transition-colors"
+                className={'w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-2 text-xs text-slate-700 dark:text-slate-300 focus:border-' + c.focus + ' focus:outline-none focus:ring-2 focus:ring-' + c.ring + ' dark:focus:ring-' + c.darkRing + ' transition-colors'}
               >
-                {allActions.map((a) => (
+                {actionList.map((a) => (
                   <option key={a} value={a}>{a}</option>
                 ))}
               </select>
@@ -69,7 +70,7 @@ export default function StepCard({ step, index, onChange, onDelete, onDuplicate,
                   value={step.value || ''}
                   onChange={(e) => onChange(index, 'value', e.target.value)}
                   placeholder={step.action === 'Open URL' ? '/login or full URL' : step.action === 'Upload File' ? '/path/to/file.pdf' : 'value'}
-                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-500 focus:border-pink-500 focus:outline-none focus:ring-2 focus:ring-pink-200 dark:focus:ring-pink-800 transition-colors"
+                  className={'w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-500 focus:border-' + c.focus + ' focus:outline-none focus:ring-2 focus:ring-' + c.ring + ' dark:focus:ring-' + c.darkRing + ' transition-colors'}
                 />
               </div>
             )}
@@ -78,9 +79,11 @@ export default function StepCard({ step, index, onChange, onDelete, onDuplicate,
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-400">Locator</label>
               <LocatorBuilder
-                locatorType={step.locatorType || 'CSS'}
+                locatorType={step.locatorType || 'CSS Selector'}
                 locator={step.locator || ''}
                 onChange={(field, val) => onChange(index, field, val)}
+                colors={c}
+                framework={framework}
               />
             </div>
           )}
@@ -90,7 +93,7 @@ export default function StepCard({ step, index, onChange, onDelete, onDuplicate,
               onClick={() => setExpanded(!expanded)}
               className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`h-3.5 w-3.5 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`}>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={'h-3.5 w-3.5 transition-transform duration-200 ' + (expanded ? 'rotate-90' : '')}>
                 <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
               </svg>
               {expanded ? 'Hide' : 'Show'} Advanced
@@ -106,7 +109,7 @@ export default function StepCard({ step, index, onChange, onDelete, onDuplicate,
                   value={step.expectedValue || ''}
                   onChange={(e) => onChange(index, 'expectedValue', e.target.value)}
                   placeholder="Expected result after this step"
-                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-500 focus:border-pink-500 focus:outline-none focus:ring-2 focus:ring-pink-200 dark:focus:ring-pink-800 transition-colors"
+                  className={'w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-500 focus:border-' + c.focus + ' focus:outline-none focus:ring-2 focus:ring-' + c.ring + ' dark:focus:ring-' + c.darkRing + ' transition-colors'}
                 />
               </div>
               <div>
@@ -116,7 +119,7 @@ export default function StepCard({ step, index, onChange, onDelete, onDuplicate,
                   value={step.notes || ''}
                   onChange={(e) => onChange(index, 'notes', e.target.value)}
                   placeholder="Additional notes or comments"
-                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-500 focus:border-pink-500 focus:outline-none focus:ring-2 focus:ring-pink-200 dark:focus:ring-pink-800 transition-colors"
+                  className={'w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-500 focus:border-' + c.focus + ' focus:outline-none focus:ring-2 focus:ring-' + c.darkRing + ' dark:focus:ring-' + c.darkRing + ' transition-colors'}
                 />
               </div>
             </div>

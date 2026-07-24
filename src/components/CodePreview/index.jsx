@@ -3,50 +3,31 @@ import JSZip from 'jszip'
 import MonacoEditor from '@monaco-editor/react'
 import ExplanationPanel from '../ExplanationPanel'
 import QAChecklist from '../QAChecklist'
-
-const viewTabs = [
-  { id: 'script', label: 'Playwright Script' },
-  { id: 'structure', label: 'Project Structure' },
-  { id: 'explanation', label: 'Explanation' },
-  { id: 'checklist', label: 'QA Checklist' },
-]
+import BestPracticesPanel from '../BestPracticesPanel'
 
 function getFlatFiles(files) {
   return (files && files.length > 0) ? files : []
 }
 
-function buildTreeFromFiles(files, outputStyle) {
+function buildTreeFromFiles(files) {
   if (!files || files.length === 0) return []
-  if (outputStyle === 'simple') {
-    return files.map((f) => ({ name: f.name, type: 'file' }))
-  }
   const tree = [
     { name: 'tests/', type: 'folder', children: [] },
     { name: 'pages/', type: 'folder', children: [] },
-    { name: 'components/', type: 'folder', children: [] },
-    { name: 'data/', type: 'folder', children: [] },
     { name: 'utils/', type: 'folder', children: [] },
+    { name: 'data/', type: 'folder', children: [] },
+    { name: 'config/', type: 'folder', children: [] },
   ]
   files.forEach((f) => {
     const name = f.name || ''
-    if (name.startsWith('tests/')) {
-      const folder = tree.find((t) => t.name === 'tests/')
-      if (folder) folder.children.push({ name: name.replace('tests/', ''), type: 'file' })
-    } else if (name.startsWith('pages/')) {
-      const folder = tree.find((t) => t.name === 'pages/')
-      if (folder) folder.children.push({ name: name.replace('pages/', ''), type: 'file' })
-    } else if (name.startsWith('components/')) {
-      const folder = tree.find((t) => t.name === 'components/')
-      if (folder) folder.children.push({ name: name.replace('components/', ''), type: 'file' })
-    } else if (name.startsWith('data/')) {
-      const folder = tree.find((t) => t.name === 'data/')
-      if (folder) folder.children.push({ name: name.replace('data/', ''), type: 'file' })
-    } else if (name.startsWith('utils/')) {
-      const folder = tree.find((t) => t.name === 'utils/')
-      if (folder) folder.children.push({ name: name.replace('utils/', ''), type: 'file' })
-    } else {
-      tree.push({ name, type: 'file' })
+    for (const folder of tree) {
+      const prefix = folder.name
+      if (name.startsWith(prefix)) {
+        folder.children.push({ name: name.replace(prefix, ''), type: 'file' })
+        return
+      }
     }
+    tree.push({ name, type: 'file' })
   })
   return tree.filter((n) => n.type === 'folder' ? n.children.length > 0 : true)
 }
@@ -58,13 +39,11 @@ function FileTreeNode({ node, depth }) {
   return (
     <div>
       <div
-        className={`flex items-center gap-2 py-1 px-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800/50 cursor-default transition-colors ${
-          depth > 0 ? 'ml-5' : ''
-        }`}
+        className={'flex items-center gap-2 py-1 px-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800/50 cursor-default transition-colors ' + (depth > 0 ? 'ml-5' : '')}
         onClick={() => isFolder && setOpen(!open)}
       >
         {isFolder ? (
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`h-4 w-4 shrink-0 text-pink-500 transition-transform ${open ? 'rotate-90' : ''}`}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={'h-4 w-4 shrink-0 text-slate-500 transition-transform ' + (open ? 'rotate-90' : '')}>
             <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
           </svg>
         ) : (
@@ -72,7 +51,7 @@ function FileTreeNode({ node, depth }) {
             <path fillRule="evenodd" d="M5.5 3.5A1.5 1.5 0 017 2h2.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0115 6.622V16.5a1.5 1.5 0 01-1.5 1.5h-7A1.5 1.5 0 015 16.5v-13z" clipRule="evenodd" />
           </svg>
         )}
-        <span className={`text-xs font-medium ${isFolder ? 'text-slate-700 dark:text-slate-300' : 'text-slate-500 dark:text-slate-400'}`}>
+        <span className={'text-xs font-medium ' + (isFolder ? 'text-slate-700 dark:text-slate-300' : 'text-slate-500 dark:text-slate-400')}>
           {node.name}
         </span>
       </div>
@@ -87,22 +66,32 @@ function FileTreeNode({ node, depth }) {
   )
 }
 
-export default function CodePreview({ code, files, steps, assertions, checks, hasContent, onClear, outputStyle }) {
+export default function CodePreview({ code, files, steps, assertions, checks, bestPractices, hasContent, onClear, colors, framework }) {
   const editorRef = useRef(null)
   const [activeView, setActiveView] = useState('script')
   const [activeFile, setActiveFile] = useState(0)
   const [copied, setCopied] = useState(false)
   const [downloadDropdown, setDownloadDropdown] = useState(false)
 
+  const c = colors || { text: 'pink-600', darkText: 'pink-400', light: 'pink-50', dark: 'pink-900/20', border: 'pink-200', darkBorder: 'pink-800' }
+
+  const viewTabs = [
+    { id: 'script', label: 'Generated Code' },
+    { id: 'structure', label: 'Project Structure' },
+    { id: 'explanation', label: 'Explanation' },
+    { id: 'checklist', label: 'QA Checklist' },
+    { id: 'bestPractices', label: 'Best Practices' },
+  ]
+
   const currentFiles = getFlatFiles(files)
-  const fileTree = buildTreeFromFiles(currentFiles, outputStyle)
+  const fileTree = buildTreeFromFiles(currentFiles)
 
   useEffect(() => {
     setActiveFile(0)
   }, [files, code])
 
   const currentContent = currentFiles[activeFile]?.content || code || ''
-  const currentName = currentFiles[activeFile]?.name || 'test.spec.js'
+  const currentName = currentFiles[activeFile]?.name || 'output.txt'
 
   const handleMount = (editor) => {
     editorRef.current = editor
@@ -131,17 +120,7 @@ export default function CodePreview({ code, files, steps, assertions, checks, ha
     if (currentFiles.length > 1) {
       const zip = new JSZip()
       currentFiles.forEach((f) => {
-        let content = f.content
-        let name = f.name
-        if (format === 'txt') {
-          content = f.content.replace(/```/g, '').replace(/import/g, '// import')
-          name = f.name.replace(/\.\w+$/, '.txt')
-        }
-        if (format === 'md') {
-          content = '```javascript\n' + f.content + '\n```'
-          name = f.name.replace(/\.\w+$/, '.md')
-        }
-        zip.file(name, content)
+        zip.file(f.name, f.content)
       })
       const blob = await zip.generateAsync({ type: 'blob' })
       const url = URL.createObjectURL(blob)
@@ -153,25 +132,29 @@ export default function CodePreview({ code, files, steps, assertions, checks, ha
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
     } else {
-      const ext = format === 'txt' ? 'txt' : format === 'md' ? 'md' : currentName.includes('.') ? currentName.split('.').pop() : 'spec.js'
-      const mime = format === 'md' ? 'text/markdown' : format === 'txt' ? 'text/plain' : 'text/javascript'
-      let content = currentContent
-      if (format === 'txt') {
-        content = currentContent.replace(/```/g, '').replace(/import/g, '// import')
-      }
-      if (format === 'md') {
-        content = '```javascript\n' + currentContent + '\n```'
-      }
-      const blob = new Blob([content], { type: mime })
+      const mimeMap = { py: 'text/x-python', java: 'text/x-java', cs: 'text/x-csharp', js: 'text/javascript', spec: 'text/javascript' }
+      const ext = currentName.includes('.') ? currentName.split('.').pop() : 'txt'
+      const mime = mimeMap[format] || mimeMap[ext] || 'text/plain'
+      const blob = new Blob([currentContent], { type: mime })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = format === 'spec' ? currentName : currentName.replace(/\.\w+$/, `.${ext}`)
+      a.download = currentName
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
     }
+  }
+
+  function getLanguage() {
+    const name = currentName.toLowerCase()
+    if (name.endsWith('.java')) return 'java'
+    if (name.endsWith('.py')) return 'python'
+    if (name.endsWith('.cs')) return 'csharp'
+    if (name.endsWith('.js') || name.endsWith('.spec.js')) return 'javascript'
+    if (name.endsWith('.properties')) return 'ini'
+    return 'javascript'
   }
 
   return (
@@ -182,11 +165,7 @@ export default function CodePreview({ code, files, steps, assertions, checks, ha
             <button
               key={tab.id}
               onClick={() => setActiveView(tab.id)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 cursor-pointer ${
-                activeView === tab.id
-                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-              }`}
+              className={'px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 cursor-pointer ' + (activeView === tab.id ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300')}
             >
               {tab.label}
             </button>
@@ -221,7 +200,7 @@ export default function CodePreview({ code, files, steps, assertions, checks, ha
                   <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
                   <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
                 </svg>
-                {currentFiles.length > 1 ? 'Download All (ZIP)' : 'Download'}
+                {currentFiles.length > 1 ? 'Download ZIP' : 'Download'}
               </button>
               {downloadDropdown && (
                 <>
@@ -229,31 +208,13 @@ export default function CodePreview({ code, files, steps, assertions, checks, ha
                   <div className="absolute right-0 top-full mt-1 w-36 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg z-20">
                     <div className="py-1">
                       {currentFiles.length > 1 ? (
-                        <>
-                          <button onClick={() => handleDownload('spec')} className="block w-full px-3 py-1.5 text-xs text-left text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer">
-                            Download ZIP (.js)
-                          </button>
-                          <button onClick={() => handleDownload('txt')} className="block w-full px-3 py-1.5 text-xs text-left text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer">
-                            Download ZIP (.txt)
-                          </button>
-                          <button onClick={() => handleDownload('md')} className="block w-full px-3 py-1.5 text-xs text-left text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer">
-                            Download ZIP (.md)
-                          </button>
-                        </>
+                        <button onClick={() => handleDownload('zip')} className="block w-full px-3 py-1.5 text-xs text-left text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer">
+                          Download ZIP
+                        </button>
                       ) : (
-                        [
-                          { label: '.spec.js', format: 'spec' },
-                          { label: '.txt', format: 'txt' },
-                          { label: '.md', format: 'md' },
-                        ].map((opt) => (
-                          <button
-                            key={opt.format}
-                            onClick={() => handleDownload(opt.format)}
-                            className="block w-full px-3 py-1.5 text-xs text-left text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-                          >
-                            {opt.label}
-                          </button>
-                        ))
+                        <button onClick={() => handleDownload('file')} className="block w-full px-3 py-1.5 text-xs text-left text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer">
+                          Download File
+                        </button>
                       )}
                     </div>
                   </div>
@@ -278,11 +239,7 @@ export default function CodePreview({ code, files, steps, assertions, checks, ha
             <button
               key={f.name}
               onClick={() => setActiveFile(i)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-all duration-200 cursor-pointer ${
-                activeFile === i
-                  ? 'bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 border border-pink-200 dark:border-pink-800'
-                  : 'text-slate-500 dark:text-slate-400 border border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50'
-              }`}
+              className={'px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-all duration-200 cursor-pointer ' + (activeFile === i ? 'bg-' + c.light + ' dark:bg-' + c.dark + ' text-' + c.text + ' dark:text-' + c.darkText + ' border border-' + c.border + ' dark:border-' + c.darkBorder : 'text-slate-500 dark:text-slate-400 border border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50')}
             >
               {f.name}
             </button>
@@ -295,7 +252,7 @@ export default function CodePreview({ code, files, steps, assertions, checks, ha
           <MonacoEditor
             key={currentName}
             height="100%"
-            language="javascript"
+            language={getLanguage()}
             theme="vs-dark"
             value={currentContent}
             onMount={handleMount}
@@ -325,8 +282,9 @@ export default function CodePreview({ code, files, steps, assertions, checks, ha
             )}
           </div>
         )}
-        {activeView === 'explanation' && <ExplanationPanel steps={steps} assertions={assertions} />}
+        {activeView === 'explanation' && <ExplanationPanel steps={steps} assertions={assertions} framework={framework} />}
         {activeView === 'checklist' && <QAChecklist checks={checks} />}
+        {activeView === 'bestPractices' && <BestPracticesPanel bestPractices={bestPractices} />}
       </div>
     </div>
   )

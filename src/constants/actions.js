@@ -1,73 +1,81 @@
 export const actionCategories = [
   {
     category: 'Navigation',
-    actions: ['Open URL', 'Go Back', 'Go Forward', 'Reload Page', 'Close Page'],
+    actions: ['Open URL', 'Go Back', 'Go Forward', 'Reload', 'Close Page'],
   },
   {
     category: 'Mouse',
     actions: ['Click', 'Double Click', 'Right Click', 'Hover', 'Drag And Drop'],
   },
   {
-    category: 'Keyboard',
-    actions: ['Fill', 'Clear', 'Press', 'Press Enter', 'Press Escape', 'Press Tab', 'Press Arrow Keys'],
+    category: 'Keyboard / Input',
+    actions: ['Fill', 'Clear', 'Press Key', 'Type'],
   },
   {
-    category: 'Checkbox',
+    category: 'Checkbox / Radio',
     actions: ['Check', 'Uncheck'],
   },
   {
     category: 'Dropdown',
-    actions: ['Select Option'],
+    actions: ['Select Dropdown'],
   },
   {
-    category: 'Browser',
-    actions: ['New Page', 'New Context', 'Switch Tab', 'Close Tab'],
+    category: 'Waits',
+    actions: ['Wait', 'Wait For URL'],
   },
   {
     category: 'Frames',
     actions: ['Switch Frame', 'Exit Frame'],
   },
   {
-    category: 'Waits',
-    actions: ['Wait For Visible', 'Wait For Hidden', 'Wait For URL', 'Wait For Load State', 'Wait For Response'],
+    category: 'Windows / Tabs',
+    actions: ['Switch Window', 'Open New Window', 'Close Window'],
+  },
+  {
+    category: 'Scroll',
+    actions: ['Scroll'],
+  },
+  {
+    category: 'Screenshot',
+    actions: ['Take Screenshot'],
   },
   {
     category: 'File Upload',
     actions: ['Upload File'],
   },
   {
-    category: 'Screenshots',
-    actions: ['Screenshot', 'Full Page Screenshot'],
+    category: 'API',
+    actions: ['API Request'],
   },
   {
-    category: 'API',
-    actions: ['GET Request', 'POST Request', 'PUT Request', 'DELETE Request'],
+    category: 'Assertions',
+    actions: ['Assert'],
   },
-];
+]
 
-export const allActions = actionCategories.flatMap((c) => c.actions);
+export const allActions = actionCategories.flatMap((c) => c.actions)
 
 export const actionsRequiringLocator = [
   'Click', 'Double Click', 'Right Click', 'Hover',
-  'Fill', 'Clear', 'Press', 'Press Enter', 'Press Escape', 'Press Tab', 'Press Arrow Keys',
-  'Check', 'Uncheck', 'Select Option',
-  'Wait For Visible', 'Wait For Hidden',
-  'Drag And Drop',
-];
+  'Fill', 'Clear', 'Press Key', 'Type',
+  'Check', 'Uncheck', 'Select Dropdown',
+  'Wait', 'Drag And Drop', 'Scroll',
+  'Assert',
+]
 
 export const actionsRequiringValue = [
-  'Open URL', 'Fill', 'Press', 'Select Option',
-  'Wait For URL', 'Wait For Response',
-  'GET Request', 'POST Request', 'PUT Request', 'DELETE Request',
-  'Drag And Drop', 'Upload File',
-];
+  'Open URL', 'Fill', 'Press Key', 'Type',
+  'Select Dropdown', 'Wait For URL',
+  'API Request', 'Drag And Drop', 'Upload File',
+  'Scroll',
+]
 
 export const actionsWithNoLocator = [
-  'Open URL', 'Go Back', 'Go Forward', 'Reload Page', 'Close Page',
-  'New Page', 'New Context', 'Switch Tab', 'Close Tab',
-  'Exit Frame',
-  'Wait For Load State',
-  'Screenshot', 'Full Page Screenshot',
-  'GET Request', 'POST Request', 'PUT Request', 'DELETE Request',
+  'Open URL', 'Go Back', 'Go Forward', 'Reload', 'Close Page',
+  'Take Screenshot',
+  'Switch Frame', 'Exit Frame',
+  'Switch Window', 'Open New Window', 'Close Window',
+  'Wait', 'Wait For URL',
+  'API Request',
   'Upload File',
-];
+]

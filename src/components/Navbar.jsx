@@ -23,17 +23,17 @@ export default function Navbar() {
   }, [dark])
 
   const linkClass = (path) =>
-    `relative px-3 py-2 text-sm font-medium transition-colors duration-200 no-underline ${
-      location.pathname === path
-        ? 'text-pink-600 dark:text-pink-400'
-        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-    }`
+    'relative px-3 py-2 text-sm font-medium transition-colors duration-200 no-underline ' + (location.pathname === path ? 'text-pink-600 dark:text-pink-400' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white')
 
   const links = [
     { to: '/dashboard', label: 'Dashboard' },
-    { to: '/generator', label: 'Playwright Generator' },
-    { to: '/sql-builder', label: 'SQL Validation Studio' },
+    { to: '/generator', label: 'Web (Playwright)' },
+    { to: '/selenium-generator', label: 'Web (Selenium)' },
+    { to: '/appium-generator', label: 'Mobile (Appium)' },
+    { to: '/cicd-generator', label: 'CI/CD Generator' },
+    { to: '/sql-builder', label: 'SQL Validation' },
     { to: '/templates', label: 'Templates' },
+    { to: '/settings', label: 'Settings' },
   ]
 
   return (
@@ -41,9 +41,7 @@ export default function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-8">
           <Link to="/" className="flex items-center gap-2 no-underline">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pink-500 text-xs font-bold text-white">
-              PG
-            </div>
+            <img src="/logo.png" alt="PlayGen" className="h-8 w-8" />
             <span className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
               PlayGen
             </span>
@@ -92,11 +90,7 @@ export default function Navbar() {
                 key={link.to}
                 to={link.to}
                 onClick={() => setMenuOpen(false)}
-                className={`block px-3 py-2 rounded-lg text-sm font-medium no-underline ${
-                  location.pathname === link.to
-                    ? 'bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-                }`}
+                className={'block px-3 py-2 rounded-lg text-sm font-medium no-underline ' + (location.pathname === link.to ? 'bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800')}
               >
                 {link.label}
               </Link>
