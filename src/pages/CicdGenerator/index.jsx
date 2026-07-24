@@ -7,6 +7,11 @@ import BestPracticesPanel from '../../components/BestPracticesPanel'
 import { frameworkColors, cicdPlatforms, cicdLanguageMap, cicdSettings } from '../../constants/frameworks'
 import { generateTestCode, generateChecklist, generateBestPractices } from '../../generators'
 import { toPipelineModel } from '../../models/cicdPipelineModel'
+import PipelineSimulator from '../../components/PipelineSimulator'
+import AdvancedPipelineConfig, { getDefaultTestSuites, getDefaultEnvironments, getDefaultProjectVariables } from '../../components/AdvancedPipelineConfig'
+import PipelineCommandPreview from '../../components/PipelineCommandPreview'
+import PipelineSummaryView from '../../components/PipelineSummaryView'
+import ConfigurationValidator from '../../components/ConfigurationValidator'
 
 const emptyCode = '# Configure your pipeline, then click Generate.'
 
@@ -37,10 +42,20 @@ export default function CicdGenerator() {
   const [parallelExecution, setParallelExecution] = useState(false)
   const [reports, setReports] = useState({ html: true, allure: false, junit: false })
   const [artifacts, setArtifacts] = useState({ reports: true, screenshots: false, videos: false, logs: false })
+  const [simEvent, setSimEvent] = useState('all-passed')
   const [files, setFiles] = useState(null)
   const [checks, setChecks] = useState([])
   const [bestPractices, setBestPractices] = useState([])
   const [activeSection, setActiveSection] = useState('framework')
+  const [showAdvanced, setShowAdvanced] = useState(false)
+
+  const [testSuites, setTestSuites] = useState(getDefaultTestSuites)
+  const [environments, setEnvironments] = useState(getDefaultEnvironments)
+  const [activeEnvironment, setActiveEnvironment] = useState('dev')
+  const [executionOptions, setExecutionOptions] = useState({ mode: 'sequential', workers: 2, retries: 0, timeout: 60, slowMo: 0, failFast: false, headless: true })
+  const [cacheConfig, setCacheConfig] = useState({ packageManager: 'npm' })
+  const [matrixConfig, setMatrixConfig] = useState({ browsers: ['chromium'], os: ['ubuntu-latest'] })
+  const [projectVariables, setProjectVariables] = useState(getDefaultProjectVariables)
 
   const hasContent = files !== null && files.length > 0
   const colors = frameworkColors.cicd
@@ -64,14 +79,44 @@ export default function CicdGenerator() {
       parallelExecution,
       reports,
       artifacts,
+      testSuites: showAdvanced ? testSuites : [],
+      executionOptions: showAdvanced ? executionOptions : { mode: 'sequential', workers: 1, retries: 0, timeout: 60, slowMo: 0, failFast: false, headless: true },
+      environments: showAdvanced ? environments : [],
+      activeEnvironment: showAdvanced ? activeEnvironment : 'dev',
+      cacheConfig: showAdvanced ? cacheConfig : { packageManager: '' },
+      matrixConfig: showAdvanced ? matrixConfig : { browsers: [], os: [] },
+      projectVariables: showAdvanced ? projectVariables : [],
     }
     const model = toPipelineModel(pipelineInfo)
     const generatedFiles = generateTestCode(model)
+    if (showAdvanced) {
+      environments.forEach((env) => {
+        if (!env.variables) return
+        const lines = Object.entries(env.variables)
+          .filter(([, v]) => v)
+          .map(([k, v]) => `${k}=${v}`)
+        if (lines.length > 0) {
+          generatedFiles.push({
+            name: `.env.${env.id}`,
+            content: lines.join('\n') + '\n',
+          })
+        }
+      })
+      if (projectVariables && projectVariables.length > 0) {
+        const activeVars = projectVariables.filter((v) => v.key)
+        if (activeVars.length > 0) {
+          generatedFiles.push({
+            name: '.env.variables',
+            content: activeVars.map((v) => `${v.key}=${v.value}`).join('\n') + '\n',
+          })
+        }
+      }
+    }
     setFiles(generatedFiles)
     setChecks(generateChecklist(model))
     setBestPractices(generateBestPractices(model))
     setActiveSection('framework')
-  }, [automationFramework, language, ciPlatform, pipelineName, operatingSystem, trigger, executionMode, enableRetry, browser, platform, parallelExecution, reports, artifacts])
+  }, [automationFramework, language, ciPlatform, pipelineName, operatingSystem, trigger, executionMode, enableRetry, browser, platform, parallelExecution, reports, artifacts, testSuites, executionOptions, environments, activeEnvironment, cacheConfig, matrixConfig, projectVariables, showAdvanced])
 
   const handleReset = useCallback(() => {
     setAutomationFramework('playwright')
@@ -87,6 +132,14 @@ export default function CicdGenerator() {
     setParallelExecution(false)
     setReports({ html: true, allure: false, junit: false })
     setArtifacts({ reports: true, screenshots: false, videos: false, logs: false })
+    setSimEvent('all-passed')
+    setTestSuites(getDefaultTestSuites())
+    setEnvironments(getDefaultEnvironments())
+    setActiveEnvironment('dev')
+    setExecutionOptions({ mode: 'sequential', workers: 2, retries: 0, timeout: 60, slowMo: 0, failFast: false, headless: true })
+    setCacheConfig({ packageManager: 'npm' })
+    setMatrixConfig({ browsers: ['chromium'], os: ['ubuntu-latest'] })
+    setProjectVariables(getDefaultProjectVariables())
     setFiles(null)
     setChecks([])
     setBestPractices([])
@@ -113,14 +166,21 @@ export default function CicdGenerator() {
     setArtifacts((prev) => ({ ...prev, [key]: !prev[key] }))
   }, [])
 
-  const sections = [
+  const allSections = [
     { id: 'framework', label: 'Framework' },
     { id: 'language', label: 'Language' },
     { id: 'platform', label: 'CI/CD Platform' },
     { id: 'pipeline', label: 'Pipeline' },
     { id: 'reports', label: 'Reports' },
     { id: 'artifacts', label: 'Artifacts' },
+    { id: 'test-suites', label: 'Test Suites', advanced: true },
+    { id: 'environments', label: 'Environments', advanced: true },
+    { id: 'execution', label: 'Execution', advanced: true },
+    { id: 'cache-matrix', label: 'Cache & Matrix', advanced: true },
+    { id: 'variables', label: 'Variables', advanced: true },
+    { id: 'simulator', label: 'Simulator', advanced: true },
   ]
+  const sections = showAdvanced ? allSections : allSections.filter((s) => !s.advanced)
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-indigo-50/30 to-white dark:from-[#0F172A] dark:via-[#0F172A] dark:to-[#0F172A]">
@@ -157,6 +217,26 @@ export default function CicdGenerator() {
               ))}
             </div>
 
+            {!showAdvanced && (
+              <button onClick={() => setShowAdvanced(true)}
+                className="inline-flex items-center gap-1.5 text-[11px] font-medium text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors cursor-pointer mb-2"
+              >
+                Show Advanced Options
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+                </svg>
+              </button>
+            )}
+            {showAdvanced && (
+              <button onClick={() => { setShowAdvanced(false); if (allSections.find(s => s.id === activeSection)?.advanced) setActiveSection('framework') }}
+                className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 transition-colors cursor-pointer mb-2"
+              >
+                Hide Advanced Options
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                </svg>
+              </button>
+            )}
             <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/30 p-6 shadow-sm">
               {activeSection === 'framework' && (
                 <div>
@@ -354,6 +434,77 @@ export default function CicdGenerator() {
                   </div>
                 </div>
               )}
+
+              {['test-suites', 'environments', 'execution', 'cache-matrix', 'variables'].includes(activeSection) && (
+                <div>
+                  <AdvancedPipelineConfig
+                    section={activeSection}
+                    testSuites={testSuites}
+                    setTestSuites={setTestSuites}
+                    environments={environments}
+                    setEnvironments={setEnvironments}
+                    activeEnvironment={activeEnvironment}
+                    setActiveEnvironment={setActiveEnvironment}
+                    executionOptions={executionOptions}
+                    setExecutionOptions={setExecutionOptions}
+                    cacheConfig={cacheConfig}
+                    setCacheConfig={setCacheConfig}
+                    matrixConfig={matrixConfig}
+                    setMatrixConfig={setMatrixConfig}
+                    projectVariables={projectVariables}
+                    setProjectVariables={setProjectVariables}
+                  />
+                </div>
+              )}
+
+              {activeSection === 'simulator' && (
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">Pipeline Simulator</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
+                    Visually simulate how a CI/CD pipeline executes. Choose a simulation event to test different failure scenarios, then click Start Simulation.
+                  </p>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">Simulation Event</label>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Choose what happens during the pipeline run:</p>
+                      <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                        {[
+                          { id: 'all-passed', label: 'All Tests Passed', description: 'Every stage completes successfully.', icon: '✅' },
+                          { id: 'smoke-failed', label: 'Smoke Test Failed', description: 'Critical smoke tests fail, blocking the pipeline.', icon: '🔥' },
+                          { id: 'regression-failed', label: 'Regression Test Failed', description: 'Regression suite detects failures.', icon: '🧪' },
+                          { id: 'install-deps-failed', label: 'Dependency Installation Failed', description: 'npm/maven/pip install fails due to network or version issues.', icon: '📥' },
+                          { id: 'browser-install-failed', label: 'Browser Installation Failed', description: 'Playwright browser download fails due to disk space.', icon: '🌐' },
+                          { id: 'build-failed', label: 'Build Failed', description: 'Runtime setup fails due to invalid configuration.', icon: '⚙️' },
+                          { id: 'artifact-upload-failed', label: 'Artifact Upload Failed', description: 'Uploading test results fails due to storage limits.', icon: '📤' },
+                          { id: 'notification-failed', label: 'Notification Failed', description: 'Sending team notifications fails.', icon: '🔔' },
+                          { id: 'random-failure', label: 'Random Failure', description: 'A random stage fails unexpectedly.', icon: '🎲' },
+                        ].map((ev) => {
+                          const selected = ev.id === 'random-failure' && !['all-passed','smoke-failed','regression-failed','install-deps-failed','browser-install-failed','build-failed','artifact-upload-failed','notification-failed'].includes(simEvent)
+                            ? true : ev.id === simEvent
+                          return (
+                            <button key={ev.id} onClick={() => setSimEvent(ev.id)}
+                              className={'w-full text-left rounded-lg border p-2.5 cursor-pointer transition-all duration-200 ' + (selected ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 shadow-sm' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/30 hover:border-slate-300 dark:hover:border-slate-600')}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm">{ev.icon}</span>
+                                <div className="flex-1 min-w-0">
+                                  <div className={'text-xs font-medium ' + (selected ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-700 dark:text-slate-300')}>{ev.label}</div>
+                                  <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{ev.description}</div>
+                                </div>
+                                {selected && (
+                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-indigo-500 shrink-0">
+                                    <path fillRule="evenodd" d="M16.403 12.652a3 3 0 000-5.304 3 3 0 00-3.75-3.751 3 3 0 00-5.305 0 3 3 0 00-3.751 3.75 3 3 0 000 5.305 3 3 0 003.75 3.751 3 3 0 005.305 0 3 3 0 003.751-3.75zm-2.546-4.46a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-3">
@@ -390,6 +541,24 @@ export default function CicdGenerator() {
               fwLabel={fwLabel}
               language={language}
               pipelineName={pipelineName}
+              simEvent={simEvent}
+              setSimEvent={setSimEvent}
+              model={{ pipeline: { browser, os: operatingSystem, trigger, executionMode, enableRetry } }}
+              testSuites={testSuites}
+              reports={reports}
+              artifacts={artifacts}
+              activeEnvironment={activeEnvironment}
+              environments={environments}
+              executionOptions={executionOptions}
+              cacheConfig={cacheConfig}
+              matrixConfig={matrixConfig}
+              projectVariables={projectVariables}
+              operatingSystem={operatingSystem}
+              trigger={trigger}
+              executionMode={executionMode}
+              enableRetry={enableRetry}
+              browser={browser}
+              parallelExecution={parallelExecution}
             />
           </div>
         </div>
@@ -398,7 +567,7 @@ export default function CicdGenerator() {
   )
 }
 
-function CicdOutputPanel({ files, checks, bestPractices, hasContent, onClear, framework, ciLabel, fwLabel, language, pipelineName }) {
+function CicdOutputPanel({ files, checks, bestPractices, hasContent, onClear, framework, ciLabel, fwLabel, language, pipelineName, simEvent, setSimEvent, model, testSuites, reports, artifacts, activeEnvironment, environments, executionOptions, cacheConfig, matrixConfig, projectVariables, operatingSystem, trigger, executionMode, enableRetry, browser, parallelExecution }) {
   const [activeView, setActiveView] = useState('script')
   const [activeFile, setActiveFile] = useState(0)
   const [copied, setCopied] = useState(false)
@@ -413,6 +582,10 @@ function CicdOutputPanel({ files, checks, bestPractices, hasContent, onClear, fr
     { id: 'explanation', label: 'Pipeline Explanation' },
     { id: 'checklist', label: 'QA Checklist' },
     { id: 'bestPractices', label: 'Best Practices' },
+    { id: 'commandPreview', label: 'Command Preview' },
+    { id: 'summary', label: 'Pipeline Summary' },
+    { id: 'configValidator', label: 'Config Validator' },
+    { id: 'simulator', label: 'Simulator' },
   ]
 
   const handleCopy = async () => {
@@ -548,13 +721,13 @@ The generator produces a single pipeline configuration file that defines the com
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 overflow-x-auto">
           {viewTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveView(tab.id)}
-              className={'px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 cursor-pointer whitespace-nowrap ' + (activeView === tab.id ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300')}
+              className={'px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 cursor-pointer whitespace-nowrap shrink-0 ' + (activeView === tab.id ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300')}
             >
               {tab.label}
             </button>
@@ -648,6 +821,66 @@ The generator produces a single pipeline configuration file that defines the com
         )}
         {activeView === 'bestPractices' && (
           <BestPracticesPanel bestPractices={bestPractices} />
+        )}
+        {activeView === 'commandPreview' && (
+          <div className="p-4 overflow-auto h-full">
+            {hasContent ? (
+              <PipelineCommandPreview
+                framework={framework}
+                language={language}
+                testSuites={testSuites}
+                executionOptions={executionOptions}
+                cacheConfig={cacheConfig}
+                matrixConfig={matrixConfig}
+              />
+            ) : (
+              <p className="text-sm text-slate-400 dark:text-slate-500">Generate a pipeline to see the command preview.</p>
+            )}
+          </div>
+        )}
+        {activeView === 'summary' && (
+          <div className="p-4 overflow-auto h-full">
+            {hasContent ? (
+              <PipelineSummaryView
+                ciLabel={ciLabel}
+                fwLabel={fwLabel}
+                framework={framework}
+                language={language}
+                pipelineName={pipelineName}
+                browser={browser}
+                operatingSystem={operatingSystem}
+                trigger={trigger}
+                executionMode={executionMode}
+                enableRetry={enableRetry}
+                parallelExecution={parallelExecution}
+                reports={reports}
+                artifacts={artifacts}
+                testSuites={testSuites}
+                activeEnvironment={activeEnvironment}
+                environments={environments}
+                executionOptions={executionOptions}
+                cacheConfig={cacheConfig}
+                matrixConfig={matrixConfig}
+                projectVariables={projectVariables}
+              />
+            ) : (
+              <p className="text-sm text-slate-400 dark:text-slate-500">Generate a pipeline to see the summary.</p>
+            )}
+          </div>
+        )}
+        {activeView === 'configValidator' && (
+          <ConfigurationValidator
+            testSuites={testSuites}
+            reports={reports}
+            artifacts={artifacts}
+            activeEnvironment={activeEnvironment}
+            environments={environments}
+            matrixConfig={matrixConfig}
+            model={model}
+          />
+        )}
+        {activeView === 'simulator' && (
+          <PipelineSimulator ciLabel={ciLabel} fwLabel={fwLabel} language={language} pipelineName={pipelineName} />
         )}
       </div>
     </div>

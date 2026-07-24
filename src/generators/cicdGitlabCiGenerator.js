@@ -17,11 +17,16 @@ export function generateCicdGitlabCi(model) {
     ? seleniumBeforeScript(lang)
     : appiumBeforeScript(lang, p.platform)
 
+  const suiteGrep = buildSuiteGrep(p.testSuites)
+  const execMode = (p.executionOptions?.executionMode || p.executionMode || 'Headless').toLowerCase()
+  const workersFlag = (p.executionOptions?.workers || 0) > 1 ? ` --workers=${p.executionOptions.workers}` : ''
+  const retriesFlag = (p.executionOptions?.retries || 0) > 0 ? ` --retries=${p.executionOptions.retries}` : ''
+  const slowMoFlag = (p.executionOptions?.slowMo || 0) > 0 ? ` --slow-mo=${p.executionOptions.slowMo}` : ''
   const testScript = fw === 'playwright'
-    ? `    - npx playwright test${p.executionMode === 'headed' ? ' --headed' : ''}${reports.html ? '' : ' --reporter=list'}`
+    ? `    - npx playwright test${execMode === 'headed' ? ' --headed' : ''}${reports.html ? '' : ' --reporter=list'}${suiteGrep}${workersFlag}${retriesFlag}${slowMoFlag}`
     : fw === 'selenium'
-    ? seleniumTestScript(lang)
-    : appiumTestScript(lang)
+    ? seleniumTestScript(lang) + suiteGrep
+    : appiumTestScript(lang) + suiteGrep
 
   const artifactPaths = []
   if (artifacts.reports) artifactPaths.push('reports/')
@@ -52,6 +57,8 @@ ${stages.map(s => `  - ${s}`).join('\n')}
 variables:
   CI: "true"
 
+${buildGitlabCache(p.cacheConfig)}
+${buildGitlabEnvLoad(p.projectVariables)}
 ${fw === 'playwright' ? '' : ''}${fwLabel(fw)}-Tests:
   stage: test
   image: ${image}
@@ -70,6 +77,41 @@ ${reportSection}${artifactSection}
   return [
     { name: '.gitlab-ci.yml', content: content.trimStart() },
   ]
+}
+
+function buildSuiteGrep(suites) {
+  const enabled = (suites || []).filter((s) => s.enabled && s.tags && s.tags.length > 0)
+  if (enabled.length === 0) return ''
+  const tags = [...new Set(enabled.flatMap((s) => s.tags))]
+  return ` --grep "${tags.join('|')}"`
+}
+
+function buildGitlabCache(cacheConfig) {
+  const pm = cacheConfig?.packageManager
+  if (!pm) return ''
+  const paths = {
+    npm: '    - node_modules/',
+    maven: '    - .m2/',
+    gradle: '    - .gradle/',
+    pip: '    - .cache/pip/',
+    nuget: '    - .nuget/packages/',
+  }
+  const p = paths[pm]
+  if (!p) return ''
+  return `cache:
+  key: ${'{CI_COMMIT_REF_SLUG}'}
+  paths:
+${p}
+`
+}
+
+function buildGitlabEnvLoad(vars) {
+  const active = (vars || []).filter((v) => v.key)
+  if (active.length === 0) return ''
+  return `  artifacts:
+    reports:
+      dotenv: .env.variables
+`
 }
 
 function fwLabel(fw) {

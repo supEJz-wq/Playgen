@@ -99,42 +99,55 @@ const generators = {
   },
 }
 
+const cicdKeyMap = {
+  'github-actions': 'GitHub Actions',
+  'gitlab-ci': 'GitLab CI/CD',
+  'jenkins': 'Jenkins',
+  'azure-devops': 'Azure DevOps',
+}
+
+function resolveGenerator(model) {
+  if (model.pipeline) {
+    const platform = cicdKeyMap[model.pipeline.ciPlatform] || model.pipeline.ciPlatform
+    return generators['cicd:' + platform]
+  }
+  const fw = model.settings?.framework
+  const lang = model.settings?.language
+  return generators[fw + ':' + lang]
+}
+
 export function generateTestCode(model) {
-  const fw = model.settings?.framework || model.pipeline?.automationFramework
-  const lang = model.settings?.language || model.pipeline?.ciPlatform
-  const key = fw + ':' + lang
-  const gen = generators[key]
+  const gen = resolveGenerator(model)
   if (!gen) {
+    const key = model.pipeline ? 'cicd:' + model.pipeline.ciPlatform : (model.settings?.framework || '?') + ':' + (model.settings?.language || '?')
     return [{ name: 'output.txt', content: 'Generator not found for ' + key }]
   }
   return gen.generate(model)
 }
 
 export function generateExplanation(model) {
-  const fw = model.settings?.framework || model.pipeline?.automationFramework
-  const lang = model.settings?.language || model.pipeline?.ciPlatform
-  const key = fw + ':' + lang
-  const gen = generators[key]
+  const gen = resolveGenerator(model)
   if (!gen) return ''
   return gen.explanation(model)
 }
 
 export function generateChecklist(model) {
-  const fw = model.settings?.framework || model.pipeline?.automationFramework
-  const lang = model.settings?.language || model.pipeline?.ciPlatform
-  const key = fw + ':' + lang
-  const gen = generators[key]
+  const gen = resolveGenerator(model)
   if (!gen) return []
   return gen.checklist(model)
 }
 
 export function generateBestPractices(model) {
-  const fw = model.settings?.framework || model.pipeline?.automationFramework
-  const lang = model.settings?.language || model.pipeline?.ciPlatform
-  const key = fw + ':' + lang
-  const gen = generators[key]
+  const gen = resolveGenerator(model)
   if (!gen) return []
   return gen.bestPractices(model)
+}
+
+export function buildSuiteGrep(suites) {
+  const enabled = (suites || []).filter((s) => s.enabled && s.tags && s.tags.length > 0)
+  if (enabled.length === 0) return ''
+  const tags = [...new Set(enabled.flatMap((s) => s.tags))]
+  return ` --grep "${tags.join('|')}"`
 }
 
 export function getFileExtension(model) {

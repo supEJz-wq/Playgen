@@ -5,8 +5,11 @@ export function generateCicdGithubActions(model) {
   const fw = p.automationFramework
   const lang = p.language
   const os = p.operatingSystem.toLowerCase()
-  const hasRetry = p.enableRetry
-  const mode = p.executionMode.toLowerCase()
+  const browser = p.browser.toLowerCase()
+  const opts = p.executionOptions || {}
+  const isParallel = opts.mode === 'parallel' || p.parallelExecution
+  const hasRetry = (opts.retries || 0) > 0 || p.enableRetry
+  const mode = (opts.executionMode || p.executionMode || 'Headless').toLowerCase()
   const reports = p.reports
   const artifacts = p.artifacts
   const trigger = p.trigger
@@ -18,17 +21,27 @@ export function generateCicdGithubActions(model) {
     'Scheduled Run': 'schedule:\n    - cron: \'0 6 * * 1-5\'',
   }
 
-  const installStep = fw === 'playwright'
+  const loadEnvStep = buildLoadEnvStep(p.projectVariables, 'github')
+  const cacheStep = buildCacheStep(p.cacheConfig)
+  const baseInstall = fw === 'playwright'
     ? `      - name: Install Dependencies\n        run: npm ci\n\n      - name: Install Playwright Browsers\n        run: npx playwright install --with-deps`
     : fw === 'selenium'
     ? seleniumInstall(lang)
     : appiumInstall(lang, p.platform)
+  const installStep = cacheStep ? cacheStep + '\n' + baseInstall : baseInstall
 
+  const workersFlag = opts.workers && opts.workers > 1 ? ` --workers=${opts.workers}` : ''
+  const retriesFlag = opts.retries && opts.retries > 0 ? ` --retries=${opts.retries}` : ''
+  const slowMoFlag = opts.slowMo && opts.slowMo > 0 ? ` --slow-mo=${opts.slowMo}` : ''
+  const suiteGrep = buildSuiteGrep(p.testSuites)
   const testCmd = fw === 'playwright'
-    ? `npx playwright test${mode === 'headed' ? ' --headed' : ''}${reports.html ? '' : ' --reporter=list'}`
+    ? `npx playwright test${mode === 'headed' ? ' --headed' : ''}${reports.html ? '' : ' --reporter=list'}${suiteGrep}${workersFlag}${retriesFlag}${slowMoFlag}`
     : fw === 'selenium'
-    ? seleniumTestCmd(lang)
-    : appiumTestCmd(lang)
+    ? seleniumTestCmd(lang) + suiteGrep
+    : appiumTestCmd(lang) + suiteGrep
+
+  const timeoutMinutes = opts.timeout || 60
+  const failFastEnabled = opts.failFast
 
   const reportUploadSteps = generateReportUploadSteps(reports)
   const artifactSteps = generateArtifactSteps(artifacts)
@@ -52,21 +65,18 @@ jobs:
   test:
     name: Run ${fwLabel(fw)} Tests
     runs-on: ${os === 'macos' ? 'macos-latest' : os === 'windows' ? 'windows-latest' : 'ubuntu-latest'}
-${isParallel ? `    strategy:
-      matrix:
-        browser: [${browser === 'all' ? "'chromium', 'firefox', 'webkit'" : `'${browser === 'edge' ? 'chromium' : browser}'`}]
-    fail-fast: false` : ''}
+${buildMatrixBlock(p.matrixConfig, isParallel, failFastEnabled)}
 
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-${installStep}
+${loadEnvStep}${installStep}
 
       - name: Run Tests
         run: ${testCmd}
-${hasRetry ? `        continue-on-error: true
-        timeout-minutes: 30` : ''}
+${hasRetry ? `        continue-on-error: true` : ''}
+        timeout-minutes: ${timeoutMinutes}
 
 ${reportUploadSteps}${artifactSteps}
 `
@@ -74,6 +84,65 @@ ${reportUploadSteps}${artifactSteps}
   return [
     { name: '.github/workflows/pipeline.yml', content: content.trimStart() },
   ]
+}
+
+function buildSuiteGrep(suites) {
+  const enabled = (suites || []).filter((s) => s.enabled && s.tags && s.tags.length > 0)
+  if (enabled.length === 0) return ''
+  const tags = [...new Set(enabled.flatMap((s) => s.tags))]
+  return ` --grep "${tags.join('|')}"`
+}
+
+function buildCacheStep(cacheConfig) {
+  const pm = cacheConfig?.packageManager
+  if (!pm) return ''
+  const cachePath = {
+    npm: 'node_modules',
+    maven: '~/.m2',
+    gradle: '~/.gradle',
+    pip: '~/.cache/pip',
+    nuget: '~/.nuget/packages',
+  }[pm]
+  const hashFile = {
+    npm: '**/package-lock.json',
+    maven: '**/pom.xml',
+    gradle: '**/*.gradle*',
+    pip: '**/requirements.txt',
+    nuget: '**/*.csproj',
+  }[pm]
+  if (!cachePath) return ''
+  return `      - name: Cache ${pm} Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${cachePath}
+          key: ${D}{{ runner.os }}-${pm}-${D}{{ hashFiles('${hashFile}') }}
+          restore-keys: |
+            ${D}{{ runner.os }}-${pm}-
+`
+}
+
+function buildLoadEnvStep(vars, platform) {
+  const active = (vars || []).filter((v) => v.key)
+  if (active.length === 0) return ''
+  if (platform === 'github') {
+    return `      - name: Load Environment Variables\n        run: cat .env.variables >> ${D}GITHUB_ENV\n\n`
+  }
+  return ''
+}
+
+function buildMatrixBlock(matrixConfig, isParallel, failFastEnabled) {
+  const mc = matrixConfig || {}
+  const browsers = mc.browsers || []
+  const os = mc.os || []
+  if (!isParallel || (browsers.length === 0 && os.length === 0)) return ''
+  const parts = []
+  if (browsers.length > 0) {
+    parts.push(`        browser: [${browsers.map((b) => `'${b}'`).join(', ')}]`)
+  }
+  if (os.length > 0) {
+    parts.push(`        os: [${os.map((o) => `'${o}'`).join(', ')}]`)
+  }
+  return `\n    strategy:\n      matrix:\n${parts.join('\n')}\n    fail-fast: ${failFastEnabled}\n`
 }
 
 function fwLabel(fw) {

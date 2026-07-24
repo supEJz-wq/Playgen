@@ -9,7 +9,9 @@ export function generateCicdAzureDevops(model) {
 
   const vmImage = os === 'macos' ? 'macOS-latest' : os === 'windows' ? 'windows-latest' : 'ubuntu-latest'
 
-  const installStep = fw === 'playwright'
+  const azureEnvLoad = buildAzureEnvLoad(p.projectVariables)
+  const cacheStep = buildAzureCache(p.cacheConfig)
+  const baseInstall = fw === 'playwright'
     ? `      - task: Npm@1
         displayName: 'Install Dependencies'
         inputs:
@@ -21,11 +23,19 @@ export function generateCicdAzureDevops(model) {
     : fw === 'selenium'
     ? seleniumAzureStep(lang)
     : appiumAzureStep(lang, p.platform)
+  const installStep = azureEnvLoad + (cacheStep ? cacheStep + '\n' + baseInstall : baseInstall)
 
+  const execMode = (p.executionOptions?.executionMode || p.executionMode || 'Headless').toLowerCase()
+  const hasRetry = (p.executionOptions?.retries || 0) > 0 || p.enableRetry
+  const workersFlag = (p.executionOptions?.workers || 0) > 1 ? ` --workers=${p.executionOptions.workers}` : ''
+  const retriesFlag = (p.executionOptions?.retries || 0) > 0 ? ` --retries=${p.executionOptions.retries}` : ''
+  const slowMoFlag = (p.executionOptions?.slowMo || 0) > 0 ? ` --slow-mo=${p.executionOptions.slowMo}` : ''
+  const timeoutMinutes = p.executionOptions?.timeout || 60
+  const suiteGrep = buildSuiteGrep(p.testSuites)
   const testStep = fw === 'playwright'
-    ? `      - script: npx playwright test${p.executionMode === 'headed' ? ' --headed' : ''}${reports.html ? '' : ' --reporter=list'}
+    ? `      - script: npx playwright test${execMode === 'headed' ? ' --headed' : ''}${reports.html ? '' : ' --reporter=list'}${suiteGrep}${workersFlag}${retriesFlag}${slowMoFlag}
         displayName: 'Run Tests'
-        ${p.enableRetry ? 'continueOnError: true\n' : ''}`
+        ${hasRetry ? 'continueOnError: true\n' : ''}timeoutInMinutes: ${timeoutMinutes}`
     : fw === 'selenium'
     ? seleniumAzureTestStep(lang)
     : appiumAzureTestStep(lang)
@@ -74,6 +84,42 @@ ${publishSteps}
   return [
     { name: 'azure-pipelines.yml', content: content.trimStart() },
   ]
+}
+
+function buildSuiteGrep(suites) {
+  const enabled = (suites || []).filter((s) => s.enabled && s.tags && s.tags.length > 0)
+  if (enabled.length === 0) return ''
+  const tags = [...new Set(enabled.flatMap((s) => s.tags))]
+  return ` --grep "${tags.join('|')}"`
+}
+
+function buildAzureCache(cacheConfig) {
+  const pm = cacheConfig?.packageManager
+  if (!pm) return ''
+  const cacheConfigs = {
+    npm: { key: 'npm', path: 'node_modules', file: 'package-lock.json' },
+    maven: { key: 'maven', path: '.m2', file: 'pom.xml' },
+    gradle: { key: 'gradle', path: '.gradle', file: '*.gradle*' },
+    pip: { key: 'pip', path: '.cache/pip', file: 'requirements.txt' },
+    nuget: { key: 'nuget', path: '.nuget/packages', file: '*.csproj' },
+  }
+  const cfg = cacheConfigs[pm]
+  if (!cfg) return ''
+  return `      - task: Cache@2
+        displayName: 'Cache ${pm} Dependencies'
+        inputs:
+          key: ${cfg.key} | "$(Agent.OS)" | ${cfg.file}
+          path: ${cfg.path}
+          cacheHitVar: CACHE_RESTORED`
+}
+
+function buildAzureEnvLoad(vars) {
+  const active = (vars || []).filter((v) => v.key)
+  if (active.length === 0) return ''
+  return `      - script: cat .env.variables | tee -a $(Build.SourcesDirectory)/.env
+        displayName: 'Load Environment Variables'
+        condition: succeeded()
+`
 }
 
 function fwLabel(fw) {

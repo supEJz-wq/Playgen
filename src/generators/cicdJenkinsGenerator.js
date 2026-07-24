@@ -21,12 +21,18 @@ export function generateCicdJenkins(model) {
     ? seleniumJenkinsStage(lang)
     : appiumJenkinsStage(lang, p.platform)
 
+  const execMode = (p.executionOptions?.executionMode || p.executionMode || 'Headless').toLowerCase()
+  const hasRetry = (p.executionOptions?.retries || 0) > 0 || p.enableRetry
+  const workersFlag = (p.executionOptions?.workers || 0) > 1 ? ` --workers=${p.executionOptions.workers}` : ''
+  const retriesFlag = (p.executionOptions?.retries || 0) > 0 ? ` --retries=${p.executionOptions.retries}` : ''
+  const slowMoFlag = (p.executionOptions?.slowMo || 0) > 0 ? ` --slow-mo=${p.executionOptions.slowMo}` : ''
+  const suiteGrep = buildSuiteGrep(p.testSuites)
+  const loadJenkinsEnv = buildJenkinsEnvLoad(p.projectVariables)
   const testStage = fw === 'playwright'
     ? `    stage('Run Tests') {
       steps {
-        sh 'npx playwright test${p.executionMode === 'headed' ? ' --headed' : ''}${reports.html ? '' : ' --reporter=list'}'
+        ${loadJenkinsEnv}sh 'npx playwright test${execMode === 'headed' ? ' --headed' : ''}${reports.html ? '' : ' --reporter=list'}${suiteGrep}${workersFlag}${retriesFlag}${slowMoFlag}'
       }
-      ${p.enableRetry ? `retry(2) {\n        sh 'npx playwright test --retries=1'\n      }` : ''}
       post {
         always {
           junst 'test-results/**/*.xml'
@@ -39,6 +45,7 @@ export function generateCicdJenkins(model) {
 
   const reportStage = generateJenkinsReportStage(reports)
   const archiveStage = generateJenkinsArchiveStage(artifacts)
+  const timeoutMinutes = p.executionOptions?.timeout || 60
 
   const triggerConfig = trigger === 'Scheduled Run'
     ? `    triggers {
@@ -53,6 +60,10 @@ export function generateCicdJenkins(model) {
 
 pipeline {
     agent any
+
+    options {
+        timeout(time: ${timeoutMinutes}, unit: 'MINUTES')
+    }
 
     tools {
         ${fw === 'playwright' || lang === 'JavaScript' ? "nodejs 'NodeJS'" : lang === 'Java' ? "maven 'Maven'" : lang === 'Python' ? '' : "dotnet 'DotNet'"}
@@ -74,6 +85,19 @@ ${archiveStage}
   return [
     { name: 'Jenkinsfile', content: content.trimStart() },
   ]
+}
+
+function buildSuiteGrep(suites) {
+  const enabled = (suites || []).filter((s) => s.enabled && s.tags && s.tags.length > 0)
+  if (enabled.length === 0) return ''
+  const tags = [...new Set(enabled.flatMap((s) => s.tags))]
+  return ` --grep "${tags.join('|')}"`
+}
+
+function buildJenkinsEnvLoad(vars) {
+  const active = (vars || []).filter((v) => v.key)
+  if (active.length === 0) return ''
+  return `sh 'cat .env.variables > .env || true'\n        `
 }
 
 function fwLabel(fw) {
