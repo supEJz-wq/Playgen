@@ -1,16 +1,37 @@
-# React + Vite
+# PlayGen
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+### QA Automation Toolkit
 
-Currently, two official plugins are available:
+PlayGen is a web-based QA automation toolkit designed to help QA engineers create and organize automated testing projects more efficiently.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+It provides tools for generating Playwright and Selenium automation code, creating Page Object Model (POM) structures, configuring test automation projects, and generating CI/CD pipeline configuration files.
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+* Playwright test generator
+* Selenium test generator
+* Page Object Model (POM) templates
+* Appium automation support
+* CI/CD pipeline configuration generator
+* Reusable automation templates
+* Test automation project structure generation
+* QA-focused dashboard and tools
 
-## Expanding the Oxlint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+* React
+* JavaScript
+* Vite
+* Tailwind CSS
+* Playwright
+* Selenium
+* Appium
+* Git & GitHub
+
+## Purpose
+
+PlayGen was created as a QA-focused toolkit to reduce repetitive setup work when creating automation projects and to provide a structured approach to test automation.
+
+## Project Status
+
+Currently under development.
