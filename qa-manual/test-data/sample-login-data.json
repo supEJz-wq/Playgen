@@ -1,0 +1,16 @@
+{
+  "sample_login_credentials": {
+    "purpose": "Demo/test credentials used while manually testing PlayGen generators (Login template default test data)",
+    "base_url": "https://example.com",
+    "dashboard_url": "/dashboard",
+    "username": "standard_user",
+    "password": "secret_sauce",
+    "locators": {
+      "username": "getByTestId('username')",
+      "password": "getByTestId('password')",
+      "login_button": "getByTestId('login-button')",
+      "welcome_message": ".welcome-message"
+    },
+    "notes": "Replace with real environment credentials before executing generated tests against a live system."
+  }
+}
