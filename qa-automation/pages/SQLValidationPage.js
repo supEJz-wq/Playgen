@@ -5,32 +5,35 @@ export class SQLValidationPage extends BasePage {
     super(page);
     this.validationSelect = page.locator('select').first();
     this.databaseSelect = page.locator('select').nth(1);
-    this.tableInput = page.locator('input[placeholder*="e.g., users"]');
-    this.generateBtn = page.locator('button:has-text("Generate SQL")');
+    this.generateBtn = page.getByRole('button', { name: 'Generate SQL' });
+    this.sqlTabBtn = page.getByRole('button', { name: 'Generated SQL' });
+    this.copyBtn = page.getByRole('button', { name: 'Copy SQL' });
+    this.downloadBtn = page.getByRole('button', { name: 'Download' });
+    this.clearBtn = page.getByRole('button', { name: 'Clear' });
+    this.sqlOutput = page.locator('pre code, .generated-sql pre code').first();
   }
 
   async open() {
     await this.navigate('/sql-builder');
   }
 
-  async selectValidation(type) {
-    await this.validationSelect.selectOption(type);
+  async selectValidationType(type) {
+    await this.validationSelect.selectOption({ label: type });
   }
 
   async selectDatabase(db) {
-    await this.databaseSelect.selectOption(db);
+    await this.databaseSelect.selectOption({ label: db });
   }
 
-  async enterTable(name) {
-    await this.tableInput.fill(name);
-  }
-
-  async generateSQL() {
+  async generateQuery() {
     await this.generateBtn.click();
   }
 
+  async switchToSQLTab() {
+    await this.sqlTabBtn.click();
+  }
+
   async getGeneratedSQL() {
-    const editor = this.page.locator('.monaco-editor .view-lines');
-    return await editor.innerText();
+    return await this.sqlOutput.innerText();
   }
 }

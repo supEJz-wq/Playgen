@@ -1,11 +1,13 @@
-import { test } from '@playwright/test';
 import { BasePage } from './BasePage.js';
 
 export class AppiumGeneratorPage extends BasePage {
   constructor(page) {
     super(page);
-    this.generateBtn = page.locator('button:has-text("Generate Project")');
-    this.resetBtn = page.locator('button:has-text("Reset")');
+    this.templateButtons = page.locator('button:has-text("Login"), button:has-text("Mobile Login"), button:has-text("Checkout")');
+    this.languageButtons = page.locator('button:has-text("Java"), button:has-text("Python"), button:has-text("JavaScript"), button:has-text("C#")');
+    this.generateBtn = page.getByRole('button', { name: 'Generate Project' });
+    this.resetBtn = page.getByRole('button', { name: 'Reset' });
+    this.codeOutput = page.locator('.monaco-editor .view-lines, [data-testid="generated-code"]');
   }
 
   async open() {
@@ -13,11 +15,12 @@ export class AppiumGeneratorPage extends BasePage {
   }
 
   async selectTemplate(name) {
-    await this.page.locator(`button:has-text("${name}")`).first().click();
+    await this.page.getByRole('button', { name: new RegExp(`^${name}`) }).first().click();
+    await this.page.waitForTimeout(500);
   }
 
   async selectLanguage(lang) {
-    await this.page.locator(`button:has-text("🟧 ${lang}"), button:has-text("🟨 ${lang}"), button:has-text("🟩 ${lang}"), button:has-text("🟦 ${lang}")`).first().click();
+    await this.languageButtons.filter({ hasText: lang }).first().click();
   }
 
   async generateProject() {
@@ -26,5 +29,9 @@ export class AppiumGeneratorPage extends BasePage {
 
   async resetForm() {
     await this.resetBtn.click();
+  }
+
+  async getGeneratedCode() {
+    return await this.codeOutput.innerText();
   }
 }

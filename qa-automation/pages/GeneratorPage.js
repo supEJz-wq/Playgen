@@ -1,18 +1,21 @@
-import { test } from '@playwright/test';
 import { BasePage } from './BasePage.js';
 
 export class GeneratorPage extends BasePage {
   constructor(page) {
     super(page);
     this.templateButtons = page.locator('button:has-text("Login"), button:has-text("Registration"), button:has-text("Logout")');
-    this.generateBtn = page.locator('button:has-text("Generate Project")');
-    this.resetBtn = page.locator('button:has-text("Reset")');
-    this.copyCodeBtn = page.locator('button:has-text("Copy Code")');
-    this.downloadBtn = page.locator('button:has-text("Download")');
+    this.generateBtn = page.getByRole('button', { name: 'Generate Project' });
+    this.resetBtn = page.getByRole('button', { name: 'Reset' });
+    this.copyCodeBtn = page.getByRole('button', { name: 'Copy Code' });
+    this.downloadBtn = page.getByRole('button', { name: 'Download' });
+  }
+
+  async open() {
+    await this.navigate('/generator');
   }
 
   async selectTemplate(name) {
-    await this.page.locator(`button:has-text("${name}")`).first().click();
+    await this.page.getByRole('button', { name: new RegExp(`^${name}`) }).first().click();
   }
 
   async generateProject() {

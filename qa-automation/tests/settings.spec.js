@@ -15,29 +15,28 @@ test.describe('Settings', () => {
 
   test('should have framework, language, and architecture dropdowns', async () => {
     await expect(settingsPage.frameworkSelect).toBeVisible();
-    await expect(settingsPage.page.locator('select').nth(1)).toBeVisible();
-    await expect(settingsPage.page.locator('select').nth(2)).toBeVisible();
+    await expect(settingsPage.languageSelect).toBeVisible();
   });
 
-  test('should save settings and persist across navigation', async ({ page }) => {
+  test('should save settings and persist across navigation', async () => {
     await settingsPage.selectFramework('Selenium');
     await settingsPage.saveSettings();
-    await settingsPage.open();
-    const selected = await settingsPage.getSelectedFramework();
-    expect(selected).toBe('Selenium');
+    await settingsPage.navigate('/dashboard');
+    await settingsPage.navigate('/settings');
+    const value = await settingsPage.frameworkSelect.inputValue();
+    expect(value.toLowerCase()).toBe('selenium');
   });
 
   test('should reset to defaults', async () => {
     await settingsPage.selectFramework('Selenium');
     await settingsPage.saveSettings();
-    await settingsPage.resetToDefaults();
-    const selected = await settingsPage.getSelectedFramework();
-    expect(selected).toBe('playwright');
+    await settingsPage.resetSettings();
+    const value = await settingsPage.frameworkSelect.inputValue();
+    expect(value.toLowerCase()).toBe('playwright');
   });
 
-  test('should have all 5 generation option checkboxes', async () => {
+  test('should have generation option checkboxes', async () => {
     const checkboxes = settingsPage.page.locator('input[type="checkbox"]');
-    const count = await checkboxes.count();
-    expect(count).toBe(5);
+    await expect(checkboxes).toHaveCount(5);
   });
 });

@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { page } from '@playwright/test';
 
 export class BasePage {
   constructor(page) {

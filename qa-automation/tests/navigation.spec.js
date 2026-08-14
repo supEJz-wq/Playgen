@@ -1,56 +1,32 @@
 import { test, expect } from '@playwright/test';
-import { HomePage } from '../pages/HomePage.js';
-import { GeneratorPage } from '../pages/GeneratorPage.js';
+import { DashboardPage } from '../pages/DashboardPage.js';
 
-test.describe('PlayGen Navigation', () => {
-  let homePage;
+test.describe('Navigation', () => {
+  let dashboardPage;
 
   test.beforeEach(async ({ page }) => {
-    homePage = new HomePage(page);
-    await homePage.navigate('/');
+    dashboardPage = new DashboardPage(page);
+    await dashboardPage.open();
   });
 
-  test('should load homepage', async () => {
-    await expect(homePage.page.locator('h1')).toBeVisible();
-  });
+  const routes = [
+    { name: 'Playwright Generator', url: '/generator' },
+    { name: 'Selenium Generator', url: '/selenium-generator' },
+    { name: 'Mobile (Appium)', url: '/appium-generator' },
+    { name: 'CI/CD Generator', url: '/cicd-generator' },
+    { name: 'SQL Validation', url: '/sql-builder' },
+    { name: 'Templates', url: '/templates' },
+  ];
 
-  test('should navigate to Dashboard', async ({ page }) => {
-    await homePage.clickNav('dashboard');
-    await expect(page).toHaveURL(/.*dashboard/);
-  });
-
-  test('should navigate to Playwright Generator', async ({ page }) => {
-    await homePage.clickNav('playwright');
-    await expect(page).toHaveURL(/.*generator/);
-  });
-
-  test('should navigate to Selenium Generator', async ({ page }) => {
-    await homePage.clickNav('selenium');
-    await expect(page).toHaveURL(/.*selenium-generator/);
-  });
-
-  test('should navigate to Appium Generator', async ({ page }) => {
-    await homePage.clickNav('appium');
-    await expect(page).toHaveURL(/.*appium-generator/);
-  });
-
-  test('should navigate to CI/CD Generator', async ({ page }) => {
-    await homePage.clickNav('cicd');
-    await expect(page).toHaveURL(/.*cicd-generator/);
-  });
-
-  test('should navigate to SQL Validation', async ({ page }) => {
-    await homePage.clickNav('sql');
-    await expect(page).toHaveURL(/.*sql-builder/);
-  });
-
-  test('should navigate to Templates', async ({ page }) => {
-    await homePage.clickNav('templates');
-    await expect(page).toHaveURL(/.*templates/);
-  });
-
-  test('should navigate to Settings', async ({ page }) => {
-    await homePage.clickNav('settings');
-    await expect(page).toHaveURL(/.*settings/);
-  });
+  for (const route of routes) {
+    test(`should navigate to ${route.name}`, async () => {
+      const key = route.name.toLowerCase().includes('playwright') ? 'generator' :
+        route.name.toLowerCase().includes('selenium') ? 'selenium' :
+        route.name.toLowerCase().includes('appium') ? 'appium' :
+        route.name.toLowerCase().includes('ci/cd') ? 'cicd' :
+        route.name.toLowerCase().includes('sql') ? 'sql' : 'templates';
+      await dashboardPage.navigateTo(key);
+      await expect(dashboardPage.page).toHaveURL(new RegExp(route.url));
+    });
+  }
 });

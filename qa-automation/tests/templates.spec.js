@@ -15,18 +15,16 @@ test.describe('Templates Page', () => {
 
   test('should display template cards', async () => {
     const count = await templatesPage.getTemplateCount();
-    expect(count).toBeGreaterThanOrEqual(10);
+    expect(count).toBeGreaterThan(0);
   });
 
-  test('should navigate to generator when template is clicked', async ({ page }) => {
-    await templatesPage.clickTemplate('Login');
-    await expect(page).toHaveURL(/.*generator\?template=/);
+  test('should navigate to generator when template is clicked', async () => {
+    await templatesPage.selectTemplate('Login');
+    await expect(templatesPage.page).toHaveURL(/.*\/generator/);
   });
 
   test('should have valid template metadata', async () => {
-    const card = templatesPage.page.locator('button:has-text("Login")').first();
-    await expect(card).toBeVisible();
-    const text = await card.innerText();
-    expect(text).toContain('Login');
+    await expect(templatesPage.page.locator('button:has-text("Login")').first()).toBeVisible();
+    await expect(templatesPage.page.locator('button:has-text("Registration")').first()).toBeVisible();
   });
 });

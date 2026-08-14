@@ -4,8 +4,10 @@ export class SettingsPage extends BasePage {
   constructor(page) {
     super(page);
     this.frameworkSelect = page.locator('select').first();
-    this.saveBtn = page.locator('button:has-text("Save Settings")');
-    this.resetBtn = page.locator('button:has-text("Reset to Defaults")');
+    this.languageSelect = page.locator('select').nth(1);
+    this.architectureSelect = page.locator('select').nth(2);
+    this.saveBtn = page.getByRole('button', { name: 'Save Settings' });
+    this.resetBtn = page.getByRole('button', { name: 'Reset to Defaults' });
   }
 
   async open() {
@@ -20,11 +22,7 @@ export class SettingsPage extends BasePage {
     await this.saveBtn.click();
   }
 
-  async resetToDefaults() {
+  async resetSettings() {
     await this.resetBtn.click();
-  }
-
-  async getSelectedFramework() {
-    return await this.frameworkSelect.inputValue();
   }
 }

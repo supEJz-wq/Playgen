@@ -2,7 +2,13 @@ import { defineConfig, devices } from '@playwright/test';
 import dotenv from 'dotenv';
 import path from 'path';
 
-dotenv.config({ path: path.resolve('C:/Users/Administrator/Desktop/Playgen/.env') });
+const envPath =
+  process.env.PW_ENV_PATH ||
+  path.resolve('C:/Users/Administrator/Desktop/Playgen/.env') ||
+  path.resolve('.env') ||
+  path.resolve('../../.env');
+
+dotenv.config({ path: envPath });
 
 export default defineConfig({
   testDir: './tests',
@@ -21,11 +27,17 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     trace: 'on-first-retry',
+    ...(process.env.PW_BROWSER_PATH ? { channel: 'chrome' } : {}),
   },
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        ...(process.env.PW_BROWSER_PATH
+          ? { channel: 'chrome' }
+          : {}),
+      },
     },
     {
       name: 'firefox',

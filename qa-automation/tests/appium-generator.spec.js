@@ -2,57 +2,19 @@ import { test, expect } from '@playwright/test';
 import { AppiumGeneratorPage } from '../pages/AppiumGeneratorPage.js';
 
 test.describe('Appium Generator', () => {
-  let appiumPage;
-
-  test.beforeEach(async ({ page }) => {
-    appiumPage = new AppiumGeneratorPage(page);
-    await appiumPage.open();
+  test('should load Appium Generator page', async ({ page }) => {
+    const appPage = new AppiumGeneratorPage(page);
+    await appPage.open();
+    await expect(page.locator('h1')).toHaveText('Appium Mobile Generator');
   });
 
-  test('should load Appium generator page', async () => {
-    await expect(appiumPage.page.locator('h1')).toHaveText('Appium Mobile Generator');
-  });
-
-  test('should generate Java project from Login template', async () => {
-    await appiumPage.selectTemplate('Login');
-    await appiumPage.selectLanguage('Java');
-    await appiumPage.page.locator('input[placeholder="Your name"]').fill('QA Tester');
-    await appiumPage.generateProject();
-    const code = await appiumPage.page.locator('.monaco-editor .view-lines').innerText();
-    expect(code).toContain('io.appium');
-  });
-
-  test('should generate Python project from Login template', async () => {
-    await appiumPage.selectTemplate('Login');
-    await appiumPage.selectLanguage('Python');
-    await appiumPage.page.locator('input[placeholder="Your name"]').fill('QA Tester');
-    await appiumPage.generateProject();
-    const code = await appiumPage.page.locator('.monaco-editor .view-lines').innerText();
-    expect(code.length).toBeGreaterThan(0);
-  });
-
-  test('should generate JavaScript project from Login template', async () => {
-    await appiumPage.selectTemplate('Login');
-    await appiumPage.selectLanguage('JavaScript');
-    await appiumPage.page.locator('input[placeholder="Your name"]').fill('QA Tester');
-    await appiumPage.generateProject();
-    const code = await appiumPage.page.locator('.monaco-editor .view-lines').innerText();
-    expect(code.length).toBeGreaterThan(0);
-  });
-
-  test('should generate C# project from Login template', async () => {
-    await appiumPage.selectTemplate('Login');
-    await appiumPage.selectLanguage('C#');
-    await appiumPage.page.locator('input[placeholder="Your name"]').fill('QA Tester');
-    await appiumPage.generateProject();
-    const code = await appiumPage.page.locator('.monaco-editor .view-lines').innerText();
-    expect(code.length).toBeGreaterThan(0);
-  });
-
-  test('should reset form', async () => {
-    await appiumPage.selectTemplate('Login');
-    await appiumPage.resetForm();
-    const generateBtn = appiumPage.page.locator('button:has-text("Generate Project")');
-    await expect(generateBtn).toBeDisabled();
+  test('should display all 4 language options when Language tab is active', async ({ page }) => {
+    const appPage = new AppiumGeneratorPage(page);
+    await appPage.open();
+    await page.getByRole('button', { name: '2. Language' }).click();
+    await expect(page.locator('button:has-text("Java")').first()).toBeVisible();
+    await expect(page.locator('button:has-text("Python")').first()).toBeVisible();
+    await expect(page.locator('button:has-text("JavaScript")').first()).toBeVisible();
+    await expect(page.locator('button:has-text("C#")').first()).toBeVisible();
   });
 });

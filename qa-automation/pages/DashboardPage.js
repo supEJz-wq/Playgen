@@ -1,16 +1,18 @@
-import { test } from '@playwright/test';
 import { BasePage } from './BasePage.js';
 
 export class DashboardPage extends BasePage {
   constructor(page) {
     super(page);
-    this.toolCards = {
-      playwright: page.locator('a:has-text("Web Generator (Playwright)")'),
-      selenium: page.locator('a:has-text("Web Generator (Selenium)")'),
-      appium: page.locator('a:has-text("Mobile Generator (Appium)")'),
-      cicd: page.locator('a:has-text("CI/CD Pipeline Generator")'),
-      sql: page.locator('a:has-text("SQL Validation Studio")'),
-      templates: page.locator('a:has-text("Pre-built Templates")'),
+    this.toolCards = page.locator('a:has-text("Web Generator (Playwright)"), a:has-text("Mobile Generator (Appium)"), a:has-text("CI/CD Pipeline Generator"), a:has-text("SQL Validation Studio"), a:has-text("Pre-built Templates")');
+    this.navLinks = {
+      dashboard: page.locator('nav a:has-text("Dashboard")'),
+      generator: page.locator('nav a:has-text("Web (Playwright)")'),
+      selenium: page.locator('nav a:has-text("Web (Selenium)")'),
+      appium: page.locator('nav a:has-text("Mobile (Appium)")'),
+      cicd: page.locator('nav a:has-text("CI/CD Generator")'),
+      sql: page.locator('nav a:has-text("SQL Validation")'),
+      templates: page.locator('nav a:has-text("Templates")'),
+      settings: page.locator('nav a:has-text("Settings")'),
     };
   }
 
@@ -18,11 +20,11 @@ export class DashboardPage extends BasePage {
     await this.navigate('/dashboard');
   }
 
-  async clickToolCard(tool) {
-    await this.toolCards[tool].click();
+  async navigateTo(route) {
+    await this.navLinks[route].click();
   }
 
   async getToolCardCount() {
-    return await this.page.locator('a:has-text("Web Generator"), a:has-text("Mobile Generator"), a:has-text("CI/CD Pipeline"), a:has-text("SQL Validation"), a:has-text("Pre-built Templates")').count();
+    return await this.toolCards.count();
   }
 }
